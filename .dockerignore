@@ -1,0 +1,23 @@
+node_modules
+npm-debug.log
+/dist
+# Cache used by TypeScript's incremental build
+*.tsbuildinfo
+
+/temp/*.*
+*.env
+
+.dockerignore
+.eslintignore
+.eslintrc.js
+.git
+.gitignore
+.mocharc.json
+.npmrc
+.prettierignore
+.prettierrc
+.vscode
+.yo-rc.json
+.yo-repository
+
+*copy.ts
