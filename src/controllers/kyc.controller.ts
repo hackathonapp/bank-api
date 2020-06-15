@@ -1,4 +1,4 @@
-import {authenticate, TokenService} from '@loopback/authentication';
+import {TokenService} from '@loopback/authentication';
 import {inject} from '@loopback/context';
 import {
   Count,
@@ -62,7 +62,7 @@ export class KycController {
   ) {}
 
   @post('/kyc/upload', {
-    security: [{jwt: []}],
+    // security: [{jwt: []}],
     responses: {
       200: {
         content: {
@@ -76,7 +76,7 @@ export class KycController {
       },
     },
   })
-  @authenticate('jwt')
+  // @authenticate('jwt')
   async kycUpload(
     @requestBody.file()
     request: Request,
@@ -232,7 +232,7 @@ export class KycController {
    * @param kyc KYC data
    */
   @post('/clients/{id}/kyc', {
-    security: [{jwt: []}],
+    // security: [{jwt: []}],
     responses: {
       '200': {
         description: 'Client.Kyc model instance',
@@ -240,7 +240,7 @@ export class KycController {
       },
     },
   })
-  @authenticate('jwt')
+  // @authenticate('jwt')
   async createKyc(
     @param.path.string('id') id: typeof Client.prototype.clientId,
     @requestBody({
@@ -262,7 +262,7 @@ export class KycController {
   }
 
   @get('/clients/{id}/kyc', {
-    security: [{jwt: []}],
+    // security: [{jwt: []}],
     responses: {
       '200': {
         description: 'Array of Client has many Kyc',
@@ -274,7 +274,7 @@ export class KycController {
       },
     },
   })
-  @authenticate('jwt')
+  // @authenticate('jwt')
   async find(
     @param.path.string('id') id: string,
     @param.query.object('filter') filter?: Filter<Kyc>,
@@ -283,7 +283,7 @@ export class KycController {
   }
 
   @patch('/clients/{id}/kyc', {
-    security: [{jwt: []}],
+    // security: [{jwt: []}],
     responses: {
       '200': {
         description: 'Client.Kyc PATCH success count',
@@ -291,7 +291,7 @@ export class KycController {
       },
     },
   })
-  @authenticate('jwt')
+  // @authenticate('jwt')
   async patch(
     @param.path.string('id') id: string,
     @requestBody({
@@ -308,7 +308,7 @@ export class KycController {
   }
 
   @del('/clients/{id}/kyc', {
-    security: [{jwt: []}],
+    // security: [{jwt: []}],
     responses: {
       '200': {
         description: 'Client.Kyc DELETE success count',
@@ -316,7 +316,7 @@ export class KycController {
       },
     },
   })
-  @authenticate('jwt')
+  // @authenticate('jwt')
   async delete(
     @param.path.string('id') id: string,
     @param.query.object('where', getWhereSchemaFor(Kyc)) where?: Where<Kyc>,
