@@ -21,6 +21,7 @@ const OTPVerifyResponseSchema = {
   required: ['valid'],
   properties: {
     valid: {type: 'boolean'},
+    authToken: {type: 'string'},
   },
 };
 

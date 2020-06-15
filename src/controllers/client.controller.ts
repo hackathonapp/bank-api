@@ -90,7 +90,7 @@ export class ClientController {
   }
 
   @get('/clients', {
-    security: [{jwt: []}],
+    // security: [{jwt: []}],
     responses: {
       '200': {
         description: 'Array of Client model instances',
@@ -105,7 +105,7 @@ export class ClientController {
       },
     },
   })
-  @authenticate('jwt')
+  // @authenticate('jwt')
   async find(@param.filter(Client) filter?: Filter<Client>): Promise<Client[]> {
     return this.clientRepository.find(filter);
   }
@@ -223,14 +223,14 @@ export class ClientController {
   }
 
   @del('/clients/all', {
-    security: [{jwt: []}],
+    // security: [{jwt: []}],
     responses: {
       '204': {
         description: 'Client DELETE success',
       },
     },
   })
-  @authenticate('jwt')
+  // @authenticate('jwt')
   async deleteAll(): Promise<void> {
     await this.kycRepository.deleteAll();
     await this.clientRepository.deleteAll();
