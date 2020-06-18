@@ -1,5 +1,7 @@
-import {Request, RestBindings, get, ResponseObject} from '@loopback/rest';
 import {inject} from '@loopback/context';
+import {get, Request, ResponseObject, RestBindings} from '@loopback/rest';
+import {LoggerBindings} from '../keys';
+import {LoggerService} from '../services/winston-logger';
 
 /**
  * OpenAPI response for ping()
@@ -32,7 +34,10 @@ const PING_RESPONSE: ResponseObject = {
  * A simple controller to bounce back http requests
  */
 export class PingController {
-  constructor(@inject(RestBindings.Http.REQUEST) private req: Request) {}
+  constructor(
+    @inject(RestBindings.Http.REQUEST) private req: Request,
+    @inject(LoggerBindings.LOGGER) public winston: LoggerService,
+  ) {}
 
   // Map to `GET /ping`
   @get('/ping', {
@@ -41,6 +46,7 @@ export class PingController {
     },
   })
   ping(): object {
+    this.winston.logger.info('aaa');
     // Reply with a greeting, the current time, the url, and request headers
     return {
       greeting: 'Hello from LoopBack',

@@ -67,7 +67,8 @@
     "prettier": "^2.0.5",
     "speakeasy": "^2.0.0",
     "tslib": "^1.10.0",
-    "twilio": "^3.44.0"
+    "twilio": "^3.44.0",
+    "winston": "^3.2.1"
   },
   "devDependencies": {
     "@loopback/build": "^5.2.0",

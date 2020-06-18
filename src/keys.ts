@@ -8,6 +8,7 @@ import {BindingKey} from '@loopback/context';
 import {Onboarding} from './models';
 import {Credentials} from './repositories';
 import {PasswordHasher} from './services/hash.password.bcryptjs';
+import {LoggerService} from './services/winston-logger';
 
 export namespace TokenServiceConstants {
   export const TOKEN_SECRET_VALUE = 'myjwts3cr3t';
@@ -37,4 +38,8 @@ export namespace UserServiceBindings {
   export const USER_SERVICE = BindingKey.create<
     UserService<Onboarding, Credentials>
   >('services.user.service');
+}
+
+export namespace LoggerBindings {
+  export const LOGGER = BindingKey.create<LoggerService>('services.logger');
 }

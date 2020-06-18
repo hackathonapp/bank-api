@@ -11,6 +11,7 @@ import {ServiceMixin} from '@loopback/service-proxy';
 import path from 'path';
 import {JWTAuthenticationStrategy} from './authentication-strategies/jwt-strategy';
 import {
+  LoggerBindings,
   PasswordHasherBindings,
   TokenServiceBindings,
   TokenServiceConstants,
@@ -18,6 +19,7 @@ import {
 import {MySequence} from './sequence';
 import {BcryptHasher} from './services/hash.password.bcryptjs';
 import {JWTService} from './services/jwt-service';
+import {WinstonLoggerService} from './services/winston-logger';
 
 export class HackathonCloudfiveApplication extends BootMixin(
   ServiceMixin(RepositoryMixin(RestApplication)),
@@ -72,5 +74,7 @@ export class HackathonCloudfiveApplication extends BootMixin(
     // // Bind bcrypt hash services
     this.bind(PasswordHasherBindings.ROUNDS).to(10);
     this.bind(PasswordHasherBindings.PASSWORD_HASHER).toClass(BcryptHasher);
+
+    this.bind(LoggerBindings.LOGGER).toClass(WinstonLoggerService);
   }
 }

@@ -1,5 +1,5 @@
-import {HackathonCloudfiveApplication} from './application';
 import {ApplicationConfig} from '@loopback/core';
+import {HackathonCloudfiveApplication} from './application';
 
 export {HackathonCloudfiveApplication};
 
