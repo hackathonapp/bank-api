@@ -13,9 +13,10 @@ import {
 } from '@loopback/rest';
 import {securityId} from '@loopback/security';
 import _ from 'lodash';
-import {TokenServiceBindings} from '../keys';
+import {LoggerBindings, TokenServiceBindings} from '../keys';
 import {Onboarding} from '../models';
 import {OnboardingRepository} from '../repositories';
+import {LoggerService} from '../services/logdna-service';
 // import {Credentials} from '../repositories/onboarding.repository';
 import {validateClientInput} from '../services/validator';
 import {
@@ -32,6 +33,7 @@ export class OnboardingController {
     public onboardingRepository: OnboardingRepository,
     @inject(TokenServiceBindings.TOKEN_SERVICE)
     public jwtService: TokenService, // @inject(UserServiceBindings.USER_SERVICE) // public userService: UserService<Onboarding, Credentials>,
+    @inject(LoggerBindings.LOGGER) public logger: LoggerService,
   ) {}
 
   /**
@@ -56,6 +58,8 @@ export class OnboardingController {
     })
     onboarding: Onboarding,
   ): Promise<Object> {
+    this.logger.logger.info('POST /onboarding');
+    this.logger.logger.debug(onboarding);
     validateClientInput(_.pick(onboarding, ['emailAddress', 'mobileNumber']));
 
     // Generate onboarding token

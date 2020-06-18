@@ -2,7 +2,7 @@ import {AuthenticationComponent} from '@loopback/authentication';
 import {BootMixin} from '@loopback/boot';
 import {ApplicationConfig, createBindingFromClass} from '@loopback/core';
 import {RepositoryMixin} from '@loopback/repository';
-import {RestApplication} from '@loopback/rest';
+import {RestApplication, RestBindings} from '@loopback/rest';
 import {
   RestExplorerBindings,
   RestExplorerComponent,
@@ -16,10 +16,12 @@ import {
   TokenServiceBindings,
   TokenServiceConstants,
 } from './keys';
+import {LogErrorProvider} from './providers/log-error.provider';
 import {MySequence} from './sequence';
 import {BcryptHasher} from './services/hash.password.bcryptjs';
 import {JWTService} from './services/jwt-service';
-import {WinstonLoggerService} from './services/winston-logger';
+// import {WinstonLoggerService} from './services/winston-logger';
+import {LogDnaLoggerService} from './services/logdna-service';
 
 export class HackathonCloudfiveApplication extends BootMixin(
   ServiceMixin(RepositoryMixin(RestApplication)),
@@ -75,6 +77,9 @@ export class HackathonCloudfiveApplication extends BootMixin(
     this.bind(PasswordHasherBindings.ROUNDS).to(10);
     this.bind(PasswordHasherBindings.PASSWORD_HASHER).toClass(BcryptHasher);
 
-    this.bind(LoggerBindings.LOGGER).toClass(WinstonLoggerService);
+    this.bind(LoggerBindings.LOGGER).toClass(LogDnaLoggerService);
+    this.bind(RestBindings.SequenceActions.LOG_ERROR).toProvider(
+      LogErrorProvider,
+    );
   }
 }

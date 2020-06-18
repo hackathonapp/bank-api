@@ -8,7 +8,13 @@ export async function main(options: ApplicationConfig = {}) {
   await app.boot();
   await app.start();
 
-  const url = app.restServer.url;
+  let url: any = '';
+  if (process.env.OCP_POD_IP) {
+    url = `http://${process.env.OCP_POD_IP}:${process.env.PORT}`;
+  } else {
+    url = app.restServer.url;
+  }
+
   console.log(`Server is running at ${url}`);
   console.log(`Try ${url}/ping`);
 
