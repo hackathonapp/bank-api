@@ -51,7 +51,7 @@ export class PingController {
     this.logger.logger.info('GET /ping - Hello from LoopBack');
     // Reply with a greeting, the current time, the url, and request headers
     return {
-      greeting: 'Hello from LoopBack',
+      greeting: 'Hello from LoopBack - updated.',
       date: new Date(),
       url: this.req.url,
       headers: Object.assign({}, this.req.headers),
