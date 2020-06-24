@@ -1,4 +1,4 @@
-import {TokenService} from '@loopback/authentication';
+import {authenticate, TokenService} from '@loopback/authentication';
 import {inject} from '@loopback/context';
 import {
   Count,
@@ -283,7 +283,7 @@ export class KycController {
   }
 
   @patch('/clients/{id}/kyc', {
-    // security: [{jwt: []}],
+    security: [{jwt: []}],
     responses: {
       '200': {
         description: 'Client.Kyc PATCH success count',
@@ -291,7 +291,7 @@ export class KycController {
       },
     },
   })
-  // @authenticate('jwt')
+  @authenticate('jwt')
   async patch(
     @param.path.string('id') id: string,
     @requestBody({
@@ -308,7 +308,7 @@ export class KycController {
   }
 
   @del('/clients/{id}/kyc', {
-    // security: [{jwt: []}],
+    security: [{jwt: []}],
     responses: {
       '200': {
         description: 'Client.Kyc DELETE success count',
@@ -316,7 +316,7 @@ export class KycController {
       },
     },
   })
-  // @authenticate('jwt')
+  @authenticate('jwt')
   async delete(
     @param.path.string('id') id: string,
     @param.query.object('where', getWhereSchemaFor(Kyc)) where?: Where<Kyc>,

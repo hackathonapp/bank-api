@@ -1,4 +1,4 @@
-import {TokenService} from '@loopback/authentication';
+import {authenticate, TokenService} from '@loopback/authentication';
 import {inject} from '@loopback/core';
 import {
   Count,
@@ -76,7 +76,7 @@ export class ClientController {
   }
 
   @get('/clients/count', {
-    // security: [{jwt: []}],
+    security: [{jwt: []}],
     responses: {
       '200': {
         description: 'Client model count',
@@ -84,7 +84,7 @@ export class ClientController {
       },
     },
   })
-  // @authenticate('jwt')
+  @authenticate('jwt')
   async count(@param.where(Client) where?: Where<Client>): Promise<Count> {
     return this.clientRepository.count(where);
   }
@@ -111,7 +111,7 @@ export class ClientController {
   }
 
   @patch('/clients', {
-    // security: [{jwt: []}],
+    security: [{jwt: []}],
     responses: {
       '200': {
         description: 'Client PATCH success count',
@@ -119,7 +119,7 @@ export class ClientController {
       },
     },
   })
-  // @authenticate('jwt')
+  @authenticate('jwt')
   async updateAll(
     @requestBody({
       content: {
@@ -135,7 +135,7 @@ export class ClientController {
     return this.clientRepository.updateAll(client, where);
   }
 
-  @get('/clients/{id}', {
+  @get('/clients/{email}', {
     // security: [{jwt: []}],
     responses: {
       '200': {
@@ -152,6 +152,30 @@ export class ClientController {
     },
   })
   // @authenticate('jwt')
+  async findByEmail(
+    @param.path.string('email') email: string,
+  ): Promise<Client[]> {
+    let filter: Filter = {where: {emailAddress: email}};
+    return this.clientRepository.find(filter);
+  }
+
+  @get('/clients/{id}', {
+    security: [{jwt: []}],
+    responses: {
+      '200': {
+        description: 'Client model instance',
+        content: {
+          'application/json': {
+            schema: getModelSchemaRef(Client, {
+              includeRelations: false,
+              exclude: ['kyc'],
+            }),
+          },
+        },
+      },
+    },
+  })
+  @authenticate('jwt')
   async findById(
     @param.path.string('id') id: string,
     @param.filter(Client, {exclude: 'where'})
@@ -161,14 +185,14 @@ export class ClientController {
   }
 
   @patch('/clients/{id}', {
-    // security: [{jwt: []}],
+    security: [{jwt: []}],
     responses: {
       '204': {
         description: 'Client PATCH success',
       },
     },
   })
-  // @authenticate('jwt')
+  @authenticate('jwt')
   async updateById(
     @param.path.string('id') id: string,
     @requestBody({
@@ -185,14 +209,14 @@ export class ClientController {
   }
 
   @put('/clients/{id}', {
-    // security: [{jwt: []}],
+    security: [{jwt: []}],
     responses: {
       '204': {
         description: 'Client PUT success',
       },
     },
   })
-  // @authenticate('jwt')
+  @authenticate('jwt')
   async replaceById(
     @param.path.string('id') id: string,
     @requestBody({
@@ -209,14 +233,14 @@ export class ClientController {
   }
 
   @del('/clients/{id}', {
-    // security: [{jwt: []}],
+    security: [{jwt: []}],
     responses: {
       '204': {
         description: 'Client DELETE success',
       },
     },
   })
-  // @authenticate('jwt')
+  @authenticate('jwt')
   async deleteById(@param.path.string('id') id: string): Promise<void> {
     await this.clientRepository.kyc(id).delete();
     await this.clientRepository.deleteById(id);
