@@ -32,7 +32,7 @@ export class OnboardingController {
     @repository(OnboardingRepository)
     public onboardingRepository: OnboardingRepository,
     @inject(TokenServiceBindings.TOKEN_SERVICE)
-    public jwtService: TokenService, // @inject(UserServiceBindings.USER_SERVICE) // public userService: UserService<Onboarding, Credentials>,
+    public jwtService: TokenService,
     @inject(LoggerBindings.LOGGER) public logger: LoggerService,
   ) {}
 
@@ -59,7 +59,7 @@ export class OnboardingController {
     onboarding: Onboarding,
   ): Promise<Object> {
     this.logger.logger.info('POST /onboarding');
-    this.logger.logger.debug(onboarding);
+    this.logger.logger.debug('Request body:', onboarding);
     validateClientInput(_.pick(onboarding, ['emailAddress', 'mobileNumber']));
 
     // Generate onboarding token
@@ -70,6 +70,7 @@ export class OnboardingController {
 
     // Save onboarding
     onboarding.mobileNumber = '+' + onboarding.mobileNumber; // +63 mobile number format
+    onboarding.telephoneNumber = '+' + onboarding.telephoneNumber; // +63 telephone number format
     await this.onboardingRepository.create(key, onboarding, 600000);
 
     // Reply with a greeting, the current time, the url, and request headers
@@ -91,13 +92,12 @@ export class OnboardingController {
     @param.path.string('token')
     token: string,
   ): Promise<Object> {
-    console.log('POST /onboarding/{token}/otp');
+    this.logger.logger.info(`POST /onboarding/${token}/otp`);
     const onboarding = await this.onboardingRepository.get(token);
-    console.log('Key: %s', token);
-    console.log('Value: %o', onboarding);
     if (onboarding == null) {
       throw new HttpErrors.BadRequest(`Invalid token ${token}`);
     }
+    this.logger.logger.debug('Valid token - ', onboarding);
 
     // Generate secret and OTP
     const Speakeasy = require('speakeasy');
@@ -107,15 +107,13 @@ export class OnboardingController {
       encoding: 'base32',
       step: 300, // seconds
     });
-
-    console.log(secret.base32);
-    console.log(otp);
-    console.log(token);
+    this.logger.logger.debug(`OTP - ${otp}`);
 
     // Save onboarding secret, use previous TTL
     // TODO: Use Redis KEEPTTL option
     onboarding.secret = secret.base32;
     const ttl = await this.onboardingRepository.ttl(token);
+    this.logger.logger.debug(`TTL ${ttl}`);
     if (ttl) {
       await this.onboardingRepository.create(token, onboarding, ttl);
     }
@@ -126,6 +124,7 @@ export class OnboardingController {
     const twilioPhone = process.env.CLOUDFIVE_APP_TWILIO_PHONE_NUMBER;
     const Twilio = require('twilio');
     const client = new Twilio(accountSid, authToken);
+    this.logger.logger.debug(`Sending OTP to ${onboarding.mobileNumber}`);
     let smsid = await client.messages
       .create({
         body:
@@ -138,6 +137,7 @@ export class OnboardingController {
       .then((message: any) => {
         return message.sid;
       });
+    this.logger.logger.debug(`Send with SMS Id - ${smsid}`);
 
     return {
       otp: otp, // Remove this, OTP are not to be returned, for testing only
@@ -162,16 +162,14 @@ export class OnboardingController {
       otp: 'string';
     },
   ): Promise<Object> {
-    console.log('POST /otp/verify');
+    this.logger.logger.info('POST /otp/verify');
     const onboarding = await this.onboardingRepository.get(totp.token);
-    console.log('Key: %s', totp.token);
-    console.log('Value: %o', onboarding);
     if (onboarding == null) {
+      this.logger.logger.debug(`Invalid token ${totp.token}`);
       throw new HttpErrors.NotFound(`Token not found - ${totp.token}`);
     }
+    this.logger.logger.debug(`Valid token ${totp.token}`, onboarding);
 
-    console.log(onboarding.secret);
-    console.log(totp.otp);
     // Generate secret and OTP
     const Speakeasy = require('speakeasy');
     const otp = Speakeasy.totp.verify({
@@ -183,6 +181,7 @@ export class OnboardingController {
     });
 
     if (otp) {
+      this.logger.logger.debug(`Valid OTP ${totp.otp}`);
       // create a JSON Web Token based on the user profile
       //const userProfile = this.userService.convertToUserProfile(onboarding);
       const userProfile = {
@@ -198,6 +197,7 @@ export class OnboardingController {
       };
     }
 
+    this.logger.logger.debug(`Invalid OTP ${totp.otp}`);
     return {valid: false};
   }
 
@@ -223,10 +223,8 @@ export class OnboardingController {
   async get(
     @param.path.string('token') token: string,
   ): Promise<Omit<Onboarding, 'secret'>> {
-    console.log('GET /onboarding/{token}');
+    this.logger.logger.info(`GET /onboarding/${token}`);
     const onboarding = await this.onboardingRepository.get(token);
-    console.log('Key: %s', token);
-    console.log('Value: %o', onboarding);
     if (onboarding == null) {
       throw new HttpErrors.NotFound(`Token not found - ${token}`);
     } else {

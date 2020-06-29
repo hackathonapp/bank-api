@@ -6,9 +6,7 @@ export interface LoggerService {
 
 const logdnaWinston = require('logdna-winston');
 
-const APIKEY =
-  process.env.CLOUDFIVE_APP_LOGDNA_INGESTION_KEY ||
-  '083d83dfa1ba4813cac734421cba19c2';
+const APIKEY = process.env.CLOUDFIVE_APP_LOGDNA_INGESTION_KEY;
 const OCP_POD_NAMESPACE = process.env.OCP_POD_NAMESPACE;
 const OCP_POD_NAME = process.env.OCP_POD_NAME;
 const OCP_POD_IP = process.env.OCP_POD_IP;

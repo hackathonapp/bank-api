@@ -2,29 +2,17 @@ import {belongsTo, Entity, model, property} from '@loopback/repository';
 import {Client} from './client.model';
 
 @model()
-export class Kyc extends Entity {
+export class Signature extends Entity {
   @property({
     type: 'string',
     id: true,
     generated: true,
     mongodb: {dataType: 'ObjectId'},
   })
-  kycId?: string;
+  signatureId?: string;
 
   @belongsTo(() => Client, {}, {mongodb: {dataType: 'ObjectId'}})
   clientId?: string;
-
-  @property({
-    type: 'string',
-    required: true,
-  })
-  kycType: string;
-
-  @property({
-    type: 'string',
-    required: true,
-  })
-  kycRef: string;
 
   @property({
     type: 'string',
@@ -38,19 +26,13 @@ export class Kyc extends Entity {
   })
   objectLocation: string;
 
-  @property({
-    type: 'object',
-    required: false,
-  })
-  prediction: object;
-
-  constructor(data?: Partial<Kyc>) {
+  constructor(data?: Partial<Signature>) {
     super(data);
   }
 }
 
-// export interface KycRelations {
-//   // describe navigational properties here
-// }
+export interface SignatureRelations {
+  // describe navigational properties here
+}
 
-// export type KycWithRelations = Kyc & KycRelations;
+export type SignatureWithRelations = Signature & SignatureRelations;

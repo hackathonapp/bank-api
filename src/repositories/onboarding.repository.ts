@@ -4,11 +4,6 @@ import {promisify} from 'util';
 import {RedisDataSource} from '../datasources';
 import {Onboarding} from '../models';
 
-export type Credentials = {
-  emailAddress: string;
-  secret: string;
-};
-
 export class OnboardingRepository extends DefaultKeyValueRepository<
   Onboarding
 > {

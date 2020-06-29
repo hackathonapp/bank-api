@@ -27,9 +27,10 @@ import fd from 'form-data';
 import multer from 'multer';
 import path from 'path';
 import stream from 'stream';
-import {TokenServiceBindings} from '../keys';
-import {Client, Kyc} from '../models';
+import {LoggerBindings, TokenServiceBindings} from '../keys';
+import {Client, Kyc, Signature} from '../models';
 import {ClientRepository} from '../repositories';
+import {LoggerService} from '../services/logdna-service';
 
 const {Duplex} = stream;
 const config = {
@@ -59,6 +60,7 @@ export class KycController {
     @repository(ClientRepository) protected clientRepository: ClientRepository,
     @inject(TokenServiceBindings.TOKEN_SERVICE)
     public jwtService: TokenService,
+    @inject(LoggerBindings.LOGGER) public logger: LoggerService,
   ) {}
 
   @post('/kyc/upload', {
@@ -82,6 +84,7 @@ export class KycController {
     request: Request,
     @inject(RestBindings.Http.RESPONSE) response: Response,
   ): Promise<object> {
+    this.logger.logger.info('POST /kyc/upload');
     return new Promise<object>((resolve, reject) => {
       const storage = multer.memoryStorage();
       const upload = multer({
@@ -119,6 +122,7 @@ export class KycController {
               filename: file.originalname,
             });
 
+            this.logger.logger.debug('Sending file to OCR prediction model');
             const axios = require('axios');
             const ocrurl =
               (process.env.CLOUDFIVE_APP_MAXOCR_ENDPOINT ||
@@ -138,7 +142,7 @@ export class KycController {
               dob: '',
               issued: '',
             };
-
+            const _this = this;
             await axios
               .create({
                 headers: formData.getHeaders(),
@@ -152,35 +156,42 @@ export class KycController {
               .then((response: any) => {
                 if (response.data.status == 'ok') {
                   const ocr = response.data.text;
-                  console.log(ocr);
+                  _this.logger.logger.debug('Prediction:');
+                  _this.logger.logger.debug(ocr);
                   for (const prediction in ocr) {
                     ocr[prediction].forEach((o: any) => {
                       if (!tinDetails.type && KYC_OCR_REGEX.bir.test(o)) {
+                        _this.logger.logger.debug(
+                          'File is predicted to be a TIN ID',
+                        );
                         tinDetails.type = 'TIN';
                       } else if (prediction == '1') {
                         tinDetails.name = o;
                       } else if (!tinDetails.ref && KYC_OCR_REGEX.tin.test(o)) {
-                        tinDetails.ref = o;
-                      } else if (prediction == '3') {
+                        const s = o.split(': ');
+                        tinDetails.ref = s[1];
+                      } else if (tinDetails.ref && prediction == '2') {
                         tinDetails.address = (
                           tinDetails.address +
                           ' ' +
                           o
                         ).trim();
                       } else if (!tinDetails.dob && KYC_OCR_REGEX.dob.test(o)) {
-                        tinDetails.dob = o;
+                        const s = o.split(': ');
+                        tinDetails.dob = s[1];
                       } else if (
                         !tinDetails.issued &&
                         KYC_OCR_REGEX.issued.test(o)
                       ) {
-                        tinDetails.issued = o;
+                        const s = o.split(': ');
+                        tinDetails.issued = s[1];
                       }
                     });
                   }
                 }
               })
               .catch(function (error: any) {
-                console.log(error);
+                _this.logger.logger.error('Axios Error', error);
               });
 
             const crypto = require('crypto');
@@ -193,6 +204,7 @@ export class KycController {
               filename: file.originalname,
               isValid: true,
               ocr: {
+                prediction: tinDetails,
                 kycType: tinDetails.type,
                 kycRef: tinDetails.ref,
                 objectName: objectName,
@@ -203,7 +215,8 @@ export class KycController {
               fileResponse.isValid = false;
               fileResponse.ocr.objectName = '';
             } else {
-              console.log('Uploading to S3...');
+              this.logger.logger.debug('TIN Details', tinDetails);
+              this.logger.logger.debug('Uploading to S3...');
               const params = {
                 Bucket: 'redhat-hackathon-cloudfive-bank-kyc',
                 Key: objectName,
@@ -212,8 +225,9 @@ export class KycController {
               try {
                 const stored = await s3.upload(params).promise();
                 fileResponse.ocr.objectLocation = stored.Location;
-                console.log(stored.Location);
+                this.logger.logger.debug(stored.Location);
               } catch (err) {
+                this.logger.logger.error('S3 Error', err);
                 reject(err);
               }
             }
@@ -232,7 +246,7 @@ export class KycController {
    * @param kyc KYC data
    */
   @post('/clients/{id}/kyc', {
-    // security: [{jwt: []}],
+    security: [{jwt: []}],
     responses: {
       '200': {
         description: 'Client.Kyc model instance',
@@ -240,7 +254,7 @@ export class KycController {
       },
     },
   })
-  // @authenticate('jwt')
+  @authenticate('jwt')
   async createKyc(
     @param.path.string('id') id: typeof Client.prototype.clientId,
     @requestBody({
@@ -255,14 +269,17 @@ export class KycController {
     })
     kyc: Omit<Kyc, 'kycId'>,
   ): Promise<Kyc> {
+    this.logger.logger.info(`POST /client/${id}/kyc`);
+    this.logger.logger.debug('Request body:', kyc);
     const client = await this.clientRepository.findById(id);
+    this.logger.logger.debug('Client found?', client);
     // if (client) return this.clientRepository.kyc(clientId).create(kyc);
     // else throw new HttpErrors.NotFound(`Client not found - ${clientId}`);
     return this.clientRepository.kyc(id).create(kyc);
   }
 
   @get('/clients/{id}/kyc', {
-    // security: [{jwt: []}],
+    security: [{jwt: []}],
     responses: {
       '200': {
         description: 'Array of Client has many Kyc',
@@ -274,11 +291,12 @@ export class KycController {
       },
     },
   })
-  // @authenticate('jwt')
+  @authenticate('jwt')
   async find(
     @param.path.string('id') id: string,
     @param.query.object('filter') filter?: Filter<Kyc>,
   ): Promise<Kyc[]> {
+    this.logger.logger.info(`GET /client/${id}/kyc`);
     return this.clientRepository.kyc(id).find(filter);
   }
 
@@ -304,6 +322,7 @@ export class KycController {
     kyc: Partial<Kyc>,
     @param.query.object('where', getWhereSchemaFor(Kyc)) where?: Where<Kyc>,
   ): Promise<Count> {
+    this.logger.logger.info(`PATCH /client/${id}/kyc`);
     return this.clientRepository.kyc(id).patch(kyc, where);
   }
 
@@ -321,6 +340,101 @@ export class KycController {
     @param.path.string('id') id: string,
     @param.query.object('where', getWhereSchemaFor(Kyc)) where?: Where<Kyc>,
   ): Promise<Count> {
+    this.logger.logger.info(`DELETE /client/${id}/kyc`);
     return this.clientRepository.kyc(id).delete(where);
+  }
+
+  /**
+   * Create Speciment Signature for a given client
+   * @param id Client id
+   */
+  @post('/clients/{id}/signature', {
+    security: [{jwt: []}],
+    responses: {
+      200: {
+        description: 'Client.Signature model instance',
+        content: {'application/json': {schema: {'x-ts-type': Signature}}},
+      },
+    },
+  })
+  @authenticate('jwt')
+  async clientSignature(
+    @param.path.string('id') id: typeof Client.prototype.clientId,
+    @requestBody.file() request: Request,
+    @inject(RestBindings.Http.RESPONSE) response: Response,
+  ): Promise<Signature> {
+    this.logger.logger.info(`POST /clients/${id}/signature`);
+    const client = await this.clientRepository.findById(id);
+    this.logger.logger.debug('Client found?', client);
+    console.log(client);
+
+    return new Promise<Signature>((resolve, reject) => {
+      const storage = multer.memoryStorage();
+      const upload = multer({
+        storage: storage,
+        limits: {
+          fileSize: 1000000, // 10MB, in bytes
+          files: 5, // max 5 files per upload
+        },
+        fileFilter: function (req, file, cb) {
+          const filetypes = /jpeg|jpg|png/;
+          let mimetype = filetypes.test(file.mimetype);
+          let extname = filetypes.test(
+            path.extname(file.originalname).toLowerCase(),
+          );
+
+          if (mimetype && extname) {
+            return cb(null, true);
+          }
+
+          cb(
+            new HttpErrors.UnprocessableEntity(
+              'File not accepted, invalid mimetype',
+            ),
+          );
+        },
+      });
+
+      upload.any()(request, response, async (err: any) => {
+        if (err) reject(new HttpErrors.UnprocessableEntity(err.message));
+        else {
+          for (const file of (request as any).files) {
+            let formData = new fd();
+            formData.append('image', file.buffer, {
+              filename: file.originalname,
+            });
+
+            const crypto = require('crypto');
+            const token = crypto.randomBytes(8);
+            const key = token.toString('hex');
+            const objectName =
+              key + path.extname(file.originalname).toLowerCase();
+
+            let signature = {
+              objectName: objectName,
+              objectLocation: '',
+            };
+
+            this.logger.logger.debug('Uploading to S3...');
+            const params = {
+              Bucket: 'redhat-hackathon-cloudfive-bank-kyc',
+              Key: objectName,
+              Body: bufferToStream(file.buffer),
+            };
+            try {
+              const stored = await s3.upload(params).promise();
+              signature.objectLocation = stored.Location;
+              this.logger.logger.debug(stored.Location);
+            } catch (err) {
+              this.logger.logger.error('S3 Error', err);
+              reject(err);
+            }
+
+            resolve(this.clientRepository.signature(id).create(signature));
+          }
+          reject(new HttpErrors.UnprocessableEntity('File upload error'));
+        }
+      });
+    });
   }
 }

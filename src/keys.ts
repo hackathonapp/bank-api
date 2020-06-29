@@ -5,7 +5,7 @@
 
 import {TokenService, UserService} from '@loopback/authentication';
 import {BindingKey} from '@loopback/context';
-import {Onboarding} from './models';
+import {Client} from './models';
 import {Credentials} from './repositories';
 import {PasswordHasher} from './services/hash.password.bcryptjs';
 import {LoggerService} from './services/winston-logger';
@@ -34,9 +34,9 @@ export namespace PasswordHasherBindings {
   export const ROUNDS = BindingKey.create<number>('services.hasher.round');
 }
 
-export namespace UserServiceBindings {
-  export const USER_SERVICE = BindingKey.create<
-    UserService<Onboarding, Credentials>
+export namespace ClientServiceBindings {
+  export const CLIENT_SERVICE = BindingKey.create<
+    UserService<Client, Credentials>
   >('services.user.service');
 }
 
