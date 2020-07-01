@@ -38,115 +38,115 @@ export class Onboarding extends Model {
 
   @property({
     type: 'string',
-    required: true,
+    // required: true,
   })
   telephoneNumber: string;
 
   @property({
     type: 'string',
-    required: true,
+    // required: true,
   })
   gender: string;
 
   @property({
     type: 'string',
-    required: true,
+    // required: true,
   })
   civilStatus: string;
 
   @property({
     type: 'string',
-    required: true,
+    // required: true,
   })
   birthdate: string;
 
   @property({
     type: 'string',
-    required: true,
+    // required: true,
   })
   birthplace: string;
 
   @property({
     type: 'string',
-    required: true,
+    // required: true,
   })
   nationality: string;
 
   @property({
     type: 'string',
-    required: true,
+    // required: true,
   })
   address1: string;
 
   @property({
     type: 'string',
-    required: true,
+    // required: true,
   })
   address2: string;
 
   @property({
     type: 'string',
-    required: true,
+    // required: true,
   })
   region: string;
 
   @property({
     type: 'string',
-    required: true,
+    // required: true,
   })
   province: string;
 
   @property({
     type: 'string',
-    required: true,
+    // required: true,
   })
   city: string;
 
   @property({
     type: 'string',
-    required: true,
+    // required: true,
   })
   zipcode: string;
 
   @property({
     type: 'string',
-    required: true,
+    // required: true,
   })
   incomeType: string;
 
   @property({
     type: 'string',
-    required: true,
+    // required: true,
   })
   tin: string;
 
   @property({
     type: 'string',
-    required: true,
+    // required: true,
   })
   employerBusiness: string;
 
   @property({
     type: 'string',
-    required: true,
+    // required: true,
   })
   workBusinessNature: string;
 
   @property({
     type: 'string',
-    required: true,
+    // required: true,
   })
   occupation: string;
 
   @property({
     type: 'string',
-    required: true,
+    // required: true,
   })
   monthlyIncome: string;
 
   @property({
     type: 'string',
-    required: false,
+    // required: false,
   })
   secret: string;
 
