@@ -1,3 +1,5 @@
+// require('dotenv').config({path: '.development.env'});
+
 import {ApplicationConfig} from '@loopback/core';
 import {HackathonCloudfiveApplication} from './application';
 

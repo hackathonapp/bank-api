@@ -30,6 +30,7 @@ import stream from 'stream';
 import {LoggerBindings, TokenServiceBindings} from '../keys';
 import {Client, Kyc, Signature} from '../models';
 import {ClientRepository} from '../repositories';
+import {generateSignedUrl} from '../services/ibmcos';
 import {LoggerService} from '../services/logdna-service';
 
 const {Duplex} = stream;
@@ -64,7 +65,7 @@ export class KycController {
   ) {}
 
   @post('/kyc/upload', {
-    // security: [{jwt: []}],
+    security: [{jwt: []}],
     responses: {
       200: {
         content: {
@@ -78,7 +79,7 @@ export class KycController {
       },
     },
   })
-  // @authenticate('jwt')
+  @authenticate('jwt')
   async kycUpload(
     @requestBody.file()
     request: Request,
@@ -279,7 +280,7 @@ export class KycController {
   }
 
   @get('/clients/{id}/kyc', {
-    security: [{jwt: []}],
+    // security: [{jwt: []}],
     responses: {
       '200': {
         description: 'Array of Client has many Kyc',
@@ -291,13 +292,17 @@ export class KycController {
       },
     },
   })
-  @authenticate('jwt')
-  async find(
+  // @authenticate('jwt')
+  async findKyc(
     @param.path.string('id') id: string,
     @param.query.object('filter') filter?: Filter<Kyc>,
   ): Promise<Kyc[]> {
     this.logger.logger.info(`GET /client/${id}/kyc`);
-    return this.clientRepository.kyc(id).find(filter);
+    let kycs = await this.clientRepository.kyc(id).find(filter);
+    kycs.forEach(s => {
+      s.objectLocation = generateSignedUrl(s.objectName);
+    });
+    return kycs;
   }
 
   @patch('/clients/{id}/kyc', {
@@ -310,7 +315,7 @@ export class KycController {
     },
   })
   @authenticate('jwt')
-  async patch(
+  async patchKyc(
     @param.path.string('id') id: string,
     @requestBody({
       content: {
@@ -336,7 +341,7 @@ export class KycController {
     },
   })
   @authenticate('jwt')
-  async delete(
+  async deleteKyc(
     @param.path.string('id') id: string,
     @param.query.object('where', getWhereSchemaFor(Kyc)) where?: Where<Kyc>,
   ): Promise<Count> {
@@ -436,5 +441,77 @@ export class KycController {
         }
       });
     });
+  }
+
+  @get('/clients/{id}/signature', {
+    // security: [{jwt: []}],
+    responses: {
+      '200': {
+        description: 'Array of Client has many Signature',
+        content: {
+          'application/json': {
+            schema: {type: 'array', items: getModelSchemaRef(Signature)},
+          },
+        },
+      },
+    },
+  })
+  // @authenticate('jwt')
+  async findSignature(
+    @param.path.string('id') id: string,
+    @param.query.object('filter') filter?: Filter<Signature>,
+  ): Promise<Signature[]> {
+    this.logger.logger.info(`GET /client/${id}/signature`);
+    let signs = await this.clientRepository.signature(id).find(filter);
+    signs.forEach(s => {
+      s.objectLocation = generateSignedUrl(s.objectName);
+    });
+    return signs;
+  }
+
+  @patch('/clients/{id}/signature', {
+    security: [{jwt: []}],
+    responses: {
+      '200': {
+        description: 'Client.Signature PATCH success count',
+        content: {'application/json': {schema: CountSchema}},
+      },
+    },
+  })
+  @authenticate('jwt')
+  async patchSignature(
+    @param.path.string('id') id: string,
+    @requestBody({
+      content: {
+        'application/json': {
+          schema: getModelSchemaRef(Signature, {partial: true}),
+        },
+      },
+    })
+    signature: Partial<Signature>,
+    @param.query.object('where', getWhereSchemaFor(Signature))
+    where?: Where<Signature>,
+  ): Promise<Count> {
+    this.logger.logger.info(`PATCH /client/${id}/signature`);
+    return this.clientRepository.signature(id).patch(signature, where);
+  }
+
+  @del('/clients/{id}/signature', {
+    security: [{jwt: []}],
+    responses: {
+      '200': {
+        description: 'Client.Signature DELETE success count',
+        content: {'application/json': {schema: CountSchema}},
+      },
+    },
+  })
+  @authenticate('jwt')
+  async deleteSignature(
+    @param.path.string('id') id: string,
+    @param.query.object('where', getWhereSchemaFor(Signature))
+    where?: Where<Signature>,
+  ): Promise<Count> {
+    this.logger.logger.info(`DELETE /client/${id}/signature`);
+    return this.clientRepository.signature(id).delete(where);
   }
 }
