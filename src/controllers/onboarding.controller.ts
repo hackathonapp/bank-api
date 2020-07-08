@@ -12,10 +12,11 @@ import {
   RestBindings,
 } from '@loopback/rest';
 import {securityId} from '@loopback/security';
+import sendgrid from '@sendgrid/mail';
 import _ from 'lodash';
 import {LoggerBindings, TokenServiceBindings} from '../keys';
-import {Onboarding} from '../models';
-import {OnboardingRepository} from '../repositories';
+import {Abandoned, Onboarding} from '../models';
+import {AbandonedRepository, OnboardingRepository} from '../repositories';
 import {LoggerService} from '../services/logdna-service';
 // import {Credentials} from '../repositories/onboarding.repository';
 import {validateClientInput} from '../services/validator';
@@ -31,6 +32,8 @@ export class OnboardingController {
     @inject(RestBindings.Http.REQUEST) private req: Request,
     @repository(OnboardingRepository)
     public onboardingRepository: OnboardingRepository,
+    @repository(AbandonedRepository)
+    public abandonedRepository: AbandonedRepository,
     @inject(TokenServiceBindings.TOKEN_SERVICE)
     public jwtService: TokenService,
     @inject(LoggerBindings.LOGGER) public logger: LoggerService,
@@ -71,7 +74,7 @@ export class OnboardingController {
     // Save onboarding
     onboarding.mobileNumber = '+' + onboarding.mobileNumber; // +63 mobile number format
     onboarding.telephoneNumber = '+' + onboarding.telephoneNumber; // +63 telephone number format
-    await this.onboardingRepository.create(key, onboarding, 600000);
+    await this.onboardingRepository.create(key, onboarding, 900000);
 
     // Reply with a greeting, the current time, the url, and request headers
     return {
@@ -112,11 +115,11 @@ export class OnboardingController {
     // Save onboarding secret, use previous TTL
     // TODO: Use Redis KEEPTTL option
     onboarding.secret = secret.base32;
-    const ttl = await this.onboardingRepository.ttl(token);
-    this.logger.logger.debug(`TTL ${ttl}`);
-    if (ttl) {
-      await this.onboardingRepository.create(token, onboarding, ttl);
-    }
+    // const ttl = await this.onboardingRepository.ttl(token);
+    // this.logger.logger.debug(`TTL ${ttl}`);
+    // if (ttl) {
+    await this.onboardingRepository.create(token, onboarding, 1800000); // set wit new TTL +30minutes
+    // }
 
     // Send SMS OTP
     const accountSid = process.env.CLOUDFIVE_APP_TWILIO_ACCOUNT_SID;
@@ -225,6 +228,8 @@ export class OnboardingController {
   ): Promise<Omit<Onboarding, 'secret'>> {
     this.logger.logger.info(`GET /onboarding/${token}`);
     const onboarding = await this.onboardingRepository.get(token);
+    let ttl = await this.onboardingRepository.ttl(token);
+    console.log(ttl);
     if (onboarding == null) {
       throw new HttpErrors.NotFound(`Token not found - ${token}`);
     } else {
@@ -232,4 +237,54 @@ export class OnboardingController {
       return onboarding;
     }
   }
+
+  /**
+   * Notify all abandoned onboarding (expiring in 1minute)
+   */
+  @get('/onboarding/notifyAbandoned', {
+    responses: {
+      '200': {
+        description: 'Notify all abandoned onboarding (expiring in 1minute)',
+      },
+    },
+  })
+  async abandoned(): Promise<void> {
+    this.logger.logger.info(`GET /onboarding/notifyAbandoned`);
+    const onboarding = this.onboardingRepository.keys({match: '*'});
+    (async () => {
+      for await (const x of onboarding) {
+        const ttl = await this.onboardingRepository.ttl(x);
+        if (ttl <= 120000) {
+          this.logger.logger.debug(`${x} is expiring...`);
+          const onboarding = await this.onboardingRepository.get(x);
+          delete onboarding.secret;
+          const saved = await this.abandonedRepository.create(onboarding);
+          this.abandonedNotice(saved);
+        }
+      }
+    })();
+    return;
+  }
+
+  abandonedNotice = (applicant: Abandoned) => {
+    this.logger.logger.debug(
+      `Sending notification email for abandoned application: ${applicant.id}`,
+    );
+    let sgKey: string = process.env.CLOUDFIVE_APP_SENDGRID_API_KEY || '';
+    let sgFrom: string = process.env.CLOUDFIVE_APP_SENDGRID_SENDER || '';
+    sendgrid.setApiKey(sgKey);
+    const msg = {
+      to: applicant.emailAddress,
+      from: sgFrom,
+      subject: 'Complete your registration at CloudFive Bank Hackathon App',
+      text: `Hello ${applicant.firstName}, please complete your registration,
+        reference#${applicant.id}`,
+      html: `<div>Hello <strong>${applicant.firstName},</strong>
+        <p>Please complete your registration,</p>
+        <p>Reference#${applicant.id}</p>
+        <p>&nbsp;</p>
+        <p>Best regards,<br/><strong>The CloudFive Team</strong></p></div>`,
+    };
+    sendgrid.send(msg);
+  };
 }
