@@ -26,6 +26,7 @@ import {
   put,
   requestBody,
 } from '@loopback/rest';
+import {SecurityBindings, securityId, UserProfile} from '@loopback/security';
 import sendgrid from '@sendgrid/mail';
 import _ from 'lodash';
 import {
@@ -406,5 +407,31 @@ export class ClientController {
     const token = await this.jwtService.generateToken(userProfile);
 
     return {token};
+  }
+
+  @get('/clients/me', {
+    security: [{jwt: []}],
+    responses: {
+      '200': {
+        description: 'Client model instance',
+        content: {
+          'application/json': {
+            schema: getModelSchemaRef(Client, {
+              includeRelations: false,
+              exclude: ['kyc'],
+            }),
+          },
+        },
+      },
+    },
+  })
+  @authenticate('jwt')
+  async myProfile(
+    @inject(SecurityBindings.USER)
+    currentUserProfile: UserProfile,
+  ): Promise<Client> {
+    this.logger.logger.info(`GET /clients/me`);
+    const userId = currentUserProfile[securityId];
+    return this.clientRepository.findById(userId);
   }
 }
