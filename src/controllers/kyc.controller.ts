@@ -21,15 +21,17 @@ import {
   Response,
   RestBindings,
 } from '@loopback/rest';
+import {SecurityBindings, UserProfile} from '@loopback/security';
 import AWS from 'aws-sdk';
 import fd from 'form-data';
+import moment from 'moment';
 // import _ from 'lodash';
 import multer from 'multer';
 import path from 'path';
 import stream from 'stream';
 import {LoggerBindings, TokenServiceBindings} from '../keys';
 import {Client, Kyc, Signature} from '../models';
-import {ClientRepository} from '../repositories';
+import {ClientRepository, OnboardingRepository} from '../repositories';
 import {generateSignedUrl} from '../services/ibmcos';
 import {LoggerService} from '../services/logdna-service';
 
@@ -58,12 +60,15 @@ export class KycController {
    * @param handler - Inject an express request handler to deal with the request
    */
   constructor(
+    @repository(OnboardingRepository)
+    public onboardingRepository: OnboardingRepository,
     @repository(ClientRepository) protected clientRepository: ClientRepository,
     @inject(TokenServiceBindings.TOKEN_SERVICE)
     public jwtService: TokenService,
     @inject(LoggerBindings.LOGGER) public logger: LoggerService,
   ) {}
 
+  // @post('/onboarding/{token}/kyc', {
   @post('/kyc/upload', {
     security: [{jwt: []}],
     responses: {
@@ -81,11 +86,23 @@ export class KycController {
   })
   @authenticate('jwt')
   async kycUpload(
+    // @param.path.string('token') token: string,
     @requestBody.file()
     request: Request,
     @inject(RestBindings.Http.RESPONSE) response: Response,
+    @inject(SecurityBindings.USER)
+    currentUserProfile: UserProfile,
   ): Promise<object> {
     this.logger.logger.info('POST /kyc/upload');
+    console.log(currentUserProfile.name);
+
+    const token: any = currentUserProfile.name;
+    const onboarding = await this.onboardingRepository.get(token);
+    const date = new Date(onboarding.birthdate);
+    const subjBday = moment(date.toISOString()).format('DD/MM/YYYY');
+    const subjName = `${onboarding.lastName}, ${onboarding.firstName}`;
+    const subjTin = onboarding.tin;
+
     return new Promise<object>((resolve, reject) => {
       const storage = multer.memoryStorage();
       const upload = multer({
@@ -212,7 +229,18 @@ export class KycController {
                 objectLocation: '',
               },
             };
-            if (tinDetails.type != 'TIN') {
+
+            // TODO: Make a good cognitive indentity validation
+            let match = false;
+            if (
+              subjName === tinDetails.name &&
+              subjBday === tinDetails.dob &&
+              subjTin === tinDetails.ref
+            ) {
+              match = true;
+            }
+
+            if (!match) {
               fileResponse.isValid = false;
               fileResponse.ocr.objectName = '';
             } else {

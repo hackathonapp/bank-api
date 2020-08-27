@@ -1,5 +1,5 @@
 import {TokenService} from '@loopback/authentication';
-import {inject, uuid} from '@loopback/context';
+import {inject} from '@loopback/context';
 import {repository} from '@loopback/repository';
 import {
   get,
@@ -118,7 +118,7 @@ export class OnboardingController {
     // const ttl = await this.onboardingRepository.ttl(token);
     // this.logger.logger.debug(`TTL ${ttl}`);
     // if (ttl) {
-    await this.onboardingRepository.create(token, onboarding, 1800000); // set wit new TTL +30minutes
+    await this.onboardingRepository.create(token, onboarding, 3600000); // set wit new TTL to 1hour
     // }
 
     // Send SMS OTP
@@ -189,8 +189,8 @@ export class OnboardingController {
       //const userProfile = this.userService.convertToUserProfile(onboarding);
       const userProfile = {
         [securityId]: onboarding.firstName,
-        name: `${onboarding.firstName} ${onboarding.lastName}`,
-        id: uuid,
+        name: totp.token,
+        id: totp.token,
       };
 
       const token = await this.jwtService.generateToken(userProfile);
